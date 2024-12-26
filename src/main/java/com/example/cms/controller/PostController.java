@@ -1,5 +1,6 @@
 package com.example.cms.controller;
 
+import com.example.cms.dto.PostDTO;
 import com.example.cms.model.Post;
 import com.example.cms.service.PostService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,33 +27,38 @@ public class PostController {
     }
 
     @PostMapping
-    public ResponseEntity<Post> createPost(@RequestBody Post post, Authentication authentication) {
+    public ResponseEntity<PostDTO> createPost(@RequestBody Post post, Authentication authentication) {
         System.out.println("User from authentication: " + authentication.getName());
         Post savedPost = postService.createPost(post);
-        return new ResponseEntity<>(savedPost, HttpStatus.CREATED);
+        PostDTO postDTO = mapToDTO(savedPost);
+        return new ResponseEntity<>(postDTO, HttpStatus.CREATED);
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Post> getPostById(@PathVariable Long id){
-        return postService.getPostById(id).map(post -> new ResponseEntity<>(post, HttpStatus.OK))
+    public ResponseEntity<PostDTO> getPostById(@PathVariable Long id) {
+        return postService.getPostById(id)
+                .map(post -> new ResponseEntity<>(mapToDTO(post), HttpStatus.OK))
                 .orElse(new ResponseEntity<>(HttpStatus.NOT_FOUND));
+
     }
 
     @GetMapping
-    public ResponseEntity<Page<Post>> getAllPosts(
+    public ResponseEntity<Page<PostDTO>> getAllPosts(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<Post> posts = postService.getAllPosts(pageable);
-        return new ResponseEntity<>(posts, HttpStatus.OK);
+        Page<PostDTO> postDTOS = posts.map(this::mapToDTO);
+        return new ResponseEntity<>(postDTOS, HttpStatus.OK);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Post> updatePost(@PathVariable Long id, @RequestBody Post updatedPost, Authentication authentication) {
+    public ResponseEntity<PostDTO> updatePost(@PathVariable Long id, @RequestBody Post updatedPost, Authentication authentication) {
         System.out.println("User from authentication: " + authentication.getName());
         try {
             Post updated = postService.updatePost(id, updatedPost);
-            return new ResponseEntity<>(updated, HttpStatus.OK);
+            PostDTO postDTO = mapToDTO(updated);
+            return new ResponseEntity<>(postDTO, HttpStatus.OK);
         } catch (NoSuchElementException e){
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
@@ -69,5 +75,14 @@ public class PostController {
             return new ResponseEntity<>(HttpStatus.NOT_FOUND);
         }
 
+    }
+    private PostDTO mapToDTO(Post post) {
+        return new PostDTO(
+                post.getId(),
+                post.getTitle(),
+                post.getSubtitle(),
+                post.getContent(),
+                post.getImageUrl()
+        );
     }
 }
